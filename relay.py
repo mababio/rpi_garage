@@ -2,9 +2,16 @@ import RPi.GPIO as GPIO
 import time, sys
 import util.notification as notification
 from tinydb import TinyDB, Query 
+import requests
+from util.config import settings
+
 db = TinyDB('/home/mababio/app/db.json') 
 instance_ = Query() 
- 
+
+
+def is_garage_open():
+    return False if requests.post(settings['production']['URL']['myq_garage'], json={"isopen": ''}).json()['isopen'] \
+    == 'closed' else True
  
 def garage(pubsub_message):
     db.clear_cache()
@@ -13,10 +20,13 @@ def garage(pubsub_message):
     if pubsub_str ==  "open" or pubsub_str == "close":
         if current_value != 0 :
             notification.send_push_notification('Raspberry Pi is interfacing with Garage')
-            new_value = int(current_value) - 1
-            db.update({'value': new_value }, instance_.type== 'limit')
-            notification.send_push_notification(str( db.search(instance_.type == 'limit')[0]['value']))
-            garage_relay()
+            if not is_garage_open():
+                new_value = int(current_value) - 1
+                db.update({'value': new_value }, instance_.type== 'limit')
+                notification.send_push_notification(str( db.search(instance_.type == 'limit')[0]['value']))
+                garage_relay()
+            else:
+                notification.send_push_notification("Closing garage is disabled for now")
         else: 
             print('Limit has been reached')
             notification.send_push_notification('Appears the Garage has been Open too many times via automation!!! Has been temporary  disabled')
@@ -37,4 +47,4 @@ def garage_relay():
 
 
 if __name__ == "__main__":
-    garage()
+    garage('open')
