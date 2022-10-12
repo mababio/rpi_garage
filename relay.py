@@ -1,50 +1,54 @@
 import RPi.GPIO as GPIO
 import time, sys
 import util.notification as notification
-from tinydb import TinyDB, Query 
+from tinydb import TinyDB, Query
 import requests
 from util.config import settings
 
-db = TinyDB('/home/mababio/app/db.json') 
-instance_ = Query() 
+db = TinyDB('/home/mababio/app/db.json')
+instance_ = Query()
 
 
 def is_garage_open():
     return False if requests.post(settings['production']['URL']['myq_garage'], json={"isopen": ''}).json()['isopen'] \
-    == 'closed' else True
- 
+                    == 'closed' else True
+
+
 def garage(pubsub_message):
     db.clear_cache()
-    current_value =  db.search(instance_.type == 'limit')[0]['value'] 
-    pubsub_str =  str(pubsub_message)
-    if pubsub_str ==  "open" or pubsub_str == "close":
-        if current_value != 0 :
+    current_value = db.search(instance_.type == 'limit')[0]['value']
+    pubsub_str = str(pubsub_message)
+    if pubsub_str == "open" or pubsub_str == "close":
+        if current_value != 0:
             notification.send_push_notification('Raspberry Pi is interfacing with Garage')
             if not is_garage_open():
                 new_value = int(current_value) - 1
-                db.update({'value': new_value }, instance_.type== 'limit')
-                notification.send_push_notification(str( db.search(instance_.type == 'limit')[0]['value']))
-                garage_relay()
+                db.update({'value': new_value}, instance_.type == 'limit')
+                notification.send_push_notification(str(db.search(instance_.type == 'limit')[0]['value']))
+                notification.send_push_notification("Raspberry Pi  ::::: Opening Garage door")
+                #garage_relay()
             else:
                 notification.send_push_notification("Closing garage is disabled for now")
-        else: 
+        else:
             print('Limit has been reached')
-            notification.send_push_notification('Appears the Garage has been Open too many times via automation!!! Has been temporary  disabled')
+            notification.send_push_notification('Appears the Garage has been Open too many times via automation!!! '
+                                                'Has been temporary  disabled')
     else:
         notification.send_push_notification("pubsub message was not open or close")
+
 
 def garage_relay():
     your_board_gpio = 4
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(your_board_gpio,GPIO.OUT)
+    GPIO.setup(your_board_gpio, GPIO.OUT)
     GPIO.setwarnings(False)
     print("on")
-    GPIO.output(your_board_gpio,GPIO.HIGH)
+    GPIO.output(your_board_gpio, GPIO.HIGH)
     time.sleep(1)
-    GPIO.output(your_board_gpio,GPIO.LOW)
+    GPIO.output(your_board_gpio, GPIO.LOW)
     print("off")
     GPIO.cleanup(your_board_gpio)
 
 
 if __name__ == "__main__":
-    garage('open')
+    print(is_garage_open())
