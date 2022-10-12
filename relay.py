@@ -21,7 +21,7 @@ def garage(pubsub_message):
         if not is_garage_open():
             notification.send_push_notification(str(db.search(instance_.type == 'limit')[0]['value']))
             notification.send_push_notification("Raspberry Pi  ::::: Opening Garage door")
-            #garage_relay()
+            garage_relay()
         else:
             notification.send_push_notification("Closing garage is disabled for now")
     else:
