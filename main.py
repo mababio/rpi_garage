@@ -37,6 +37,8 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     if current_value <= 0:
         notification.send_push_notification("Raspberry Pi ::::: Blocking pubsub")
     else:
+        new_value = int(current_value) - 1
+        db.update({'value': new_value}, instance_.type == 'limit')
         pubsub_message = message.data.decode()
         message_timelapse = get_message_age(message)
         if message_timelapse >= 5:
@@ -44,8 +46,7 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         else:
             if db_mongo.get_door_close_status() == 'DRIVE_AWAY':
                 garage(pubsub_message)
-                new_value = int(current_value) - 1
-                db.update({'value': new_value}, instance_.type == 'limit')
+
                 print(' Would of opened garage')
                 notification.send_push_notification("Raspberry Pi :::::  Garage would of opened")
             else:
