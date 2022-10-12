@@ -5,6 +5,7 @@ from google.cloud import pubsub_v1
 from relay import garage
 from datetime import datetime
 from tinydb import TinyDB, Query
+from util.db_mongo import DBClient
 
 timeout = 5.0
 
@@ -15,16 +16,15 @@ subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
 db = TinyDB('/home/mababio/app/db.json')
 instance_ = Query()
+db_mongo = DBClient()
 
 
 def get_message_age(message):
     message_datetime_obj = datetime.strptime(str(message.publish_time).split('.')[0], "%Y-%m-%d %H:%M:%S")
-
     current_timestamp_utc_datetime_obj = datetime.now(pytz.UTC)
     current_timestamp_utc_datetime_obj_formatted = str(current_timestamp_utc_datetime_obj).split('.')[0]
     accepted_current_timestamp_utc_datetime_obj = datetime.strptime(current_timestamp_utc_datetime_obj_formatted,
                                                                     "%Y-%m-%d %H:%M:%S")
-
     timelapse = accepted_current_timestamp_utc_datetime_obj - message_datetime_obj
     return int(timelapse.total_seconds())  # this is in sec
 
@@ -42,9 +42,14 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         if message_timelapse >= 5:
             notification.send_push_notification("Raspberry Pi ::::: pubsub message is more than 5 secs, so ignore")
         else:
-            garage(pubsub_message)
-            print(' Would of opened garage')
-            notification.send_push_notification("Raspberry Pi :::::  Garage would of opened")
+            if db_mongo.get_door_close_status == 'DRIVE_AWAY':
+                garage(pubsub_message)
+                new_value = int(current_value) - 1
+                db.update({'value': new_value}, instance_.type == 'limit')
+                print(' Would of opened garage')
+                notification.send_push_notification("Raspberry Pi :::::  Garage would of opened")
+            else:
+                notification.send_push_notification("Raspberry Pi ::::: door_close_status is not set to DRIVE_AWAY")
 
 
 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)

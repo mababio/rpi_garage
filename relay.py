@@ -15,24 +15,15 @@ def is_garage_open():
 
 
 def garage(pubsub_message):
-    db.clear_cache()
-    current_value = db.search(instance_.type == 'limit')[0]['value']
     pubsub_str = str(pubsub_message)
     if pubsub_str == "open" or pubsub_str == "close":
-        if current_value != 0:
-            notification.send_push_notification('Raspberry Pi is interfacing with Garage')
-            if not is_garage_open():
-                new_value = int(current_value) - 1
-                db.update({'value': new_value}, instance_.type == 'limit')
-                notification.send_push_notification(str(db.search(instance_.type == 'limit')[0]['value']))
-                notification.send_push_notification("Raspberry Pi  ::::: Opening Garage door")
-                #garage_relay()
-            else:
-                notification.send_push_notification("Closing garage is disabled for now")
+        notification.send_push_notification('Raspberry Pi is interfacing with Garage')
+        if not is_garage_open():
+            notification.send_push_notification(str(db.search(instance_.type == 'limit')[0]['value']))
+            notification.send_push_notification("Raspberry Pi  ::::: Opening Garage door")
+            #garage_relay()
         else:
-            print('Limit has been reached')
-            notification.send_push_notification('Appears the Garage has been Open too many times via automation!!! '
-                                                'Has been temporary  disabled')
+            notification.send_push_notification("Closing garage is disabled for now")
     else:
         notification.send_push_notification("pubsub message was not open or close")
 
