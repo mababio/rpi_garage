@@ -42,7 +42,7 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         if message_timelapse >= 5:
             notification.send_push_notification("Raspberry Pi ::::: pubsub message is more than 5 secs, so ignore")
         else:
-            if db_mongo.get_door_close_status == 'DRIVE_AWAY':
+            if db_mongo.get_door_close_status() == 'DRIVE_AWAY':
                 garage(pubsub_message)
                 new_value = int(current_value) - 1
                 db.update({'value': new_value}, instance_.type == 'limit')
