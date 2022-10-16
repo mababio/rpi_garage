@@ -46,9 +46,6 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         else:
             if db_mongo.get_door_close_status() == 'DRIVE_AWAY':
                 garage(pubsub_message)
-
-                print(' Would of opened garage')
-                notification.send_push_notification("Raspberry Pi :::::  Garage would of opened")
             else:
                 notification.send_push_notification("Raspberry Pi ::::: door_close_status is not set to DRIVE_AWAY")
 
