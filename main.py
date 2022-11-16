@@ -45,7 +45,6 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
             notification.send_push_notification("Raspberry Pi ::::: pubsub message is more than 5 secs, so ignore")
         else:
             if db_mongo.get_door_close_status() == 'DRIVE_AWAY':
-                notification.send_push_notification("Raspberry Pi ::::: TESTING")
                 garage(pubsub_message)
             else:
                 notification.send_push_notification("Raspberry Pi ::::: door_close_status is not set to DRIVE_AWAY")
