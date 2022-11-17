@@ -10,7 +10,7 @@ instance_ = Query()
 
 
 def is_garage_open():
-    return False if requests.post(settings['production']['URL']['myq_garage'], json={"isopen": ''}).json()['isopen'] \
+    return False if requests.Session().post(settings['production']['URL']['myq_garage'], json={"isopen": ''}).json()['isopen'] \
                     == 'closed' else True
 
 
@@ -40,4 +40,5 @@ def garage_relay():
 if __name__ == "__main__":
     #garage_relay()
     #print('')
-    garage('open')
+    print(is_garage_open())
+    #garage('open')
