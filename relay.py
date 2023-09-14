@@ -15,6 +15,10 @@ def is_garage_open():
 
 
 def garage(pubsub_message):
+    """
+        Wrapper around the low level control for garage.
+    :param pubsub_message: string pub/sub message to either open or close garage door
+    """
     pubsub_str = str(pubsub_message)
     if pubsub_str == "open" or pubsub_str == "close":
         if not is_garage_open():
@@ -27,6 +31,9 @@ def garage(pubsub_message):
 
 
 def garage_relay():
+    """
+    Low level controls to open/close garage
+    """
     your_board_gpio = 4
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(your_board_gpio, GPIO.OUT)

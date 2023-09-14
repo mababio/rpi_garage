@@ -19,7 +19,14 @@ instance_ = Query()
 db_mongo = DBClient()
 
 
+# TODO: Maybe there is some logic from the pub/sub layer that can make this function obsolete
 def get_message_age(message):
+    """
+    Gets the pub/sub message. Used to determine if the message to open/close garage is stale.
+    Why would you want to close/open  garage door based on a signal that's 10 mins old
+    :param message: pub/sub message object
+    :return: int time in seconds
+    """
     message_datetime_obj = datetime.strptime(str(message.publish_time).split('.')[0], "%Y-%m-%d %H:%M:%S")
     current_timestamp_utc_datetime_obj = datetime.now(pytz.UTC)
     current_timestamp_utc_datetime_obj_formatted = str(current_timestamp_utc_datetime_obj).split('.')[0]
@@ -58,8 +65,7 @@ with subscriber:
     try:
         # When `timeout` is not set, result() will block indefinitely,
         # unless an exception is encountered first.
-        streaming_pull_future.result()#timeout=timeout)
+        streaming_pull_future.result()  # timeout=timeout)
     except TimeoutError:
         streaming_pull_future.cancel()  # Trigger the shutdown.
         streaming_pull_future.result()  # Block until the shutdown is complete.
-
