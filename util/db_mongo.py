@@ -10,7 +10,8 @@ class DBClient:
 
     def __init__(self):
         try:
-REMOVED
+            client = pymongo.MongoClient(settings['production']['mongo_client_url'], settings['production']['username'],
+                                         settings['production']['password'], server_api=ServerApi('1'))
             self.tesla_database = client['tesla']
         except Exception as e:
             raise
