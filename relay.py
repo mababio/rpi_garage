@@ -45,7 +45,14 @@ def garage_relay():
 
 
 if __name__ == "__main__":
-    #garage_relay()
-    #print('')
-    print(is_garage_open())
-    #garage('open')
+    your_board_gpio = 4
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(your_board_gpio, GPIO.OUT)
+
+    state = GPIO.input(4)
+
+    if state:
+        print('yes')
+    else:
+        print('no')
+
