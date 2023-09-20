@@ -6,3 +6,4 @@ db.json
 log/
 *.pyc
 .idea
+settings.toml

@@ -1,3 +1,4 @@
 tinydb
 RPi.GPIO
 dynaconf
+paho.mqtt
