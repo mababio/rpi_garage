@@ -2,14 +2,7 @@ from concurrent.futures import TimeoutError
 from google.cloud import pubsub_v1
 from urllib import request, parse
 from control import garage
-
-chanify = 'CIC8jp0GEiJBRERKNklQMlJNSEpaSkhSSEdOR1pIUEE0NUlQQUFNNENVIgIIAQ.WZeft-Bg2oKWAC7_3DSzh1vnwnLPH-kPUlqm0cM2WWg'
-def send_push_notification(message):
-     #settings['production']['key']['chanify']
-    message_json = {'text': message}
-    data = parse.urlencode(message_json).encode()
-    req = request.Request("https://api.chanify.net/v1/sender/" + , data=data)
-    request.urlopen(req)
+import notification
 
 
 # TODO(developer)
@@ -28,9 +21,9 @@ subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     print(f"Received {message}.")
-    send_push_notification('mababio@@@@')
-    garage()
     message.ack()
+    notification.send_push_notification('mababio@@@@')
+    garage()
 
 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
 print(f"Listening for messages on {subscription_path}..\n")
