@@ -1,11 +1,12 @@
 import RPi.GPIO as GPIO
 import time, sys
-
-
-def garage1():
-    print('fffffffffffffff')
+import notification
 
 def garage():
+    print('fffffffffffffff')
+    notification.send_push_notification('garage closing ... testing')
+
+def garage_hold():
     your_board_gpio = 4
 
     GPIO.setmode(GPIO.BCM)
