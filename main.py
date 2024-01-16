@@ -1,3 +1,4 @@
+import os
 from multiprocessing import Process
 import time
 import RPi.GPIO as GPIO
@@ -7,13 +8,19 @@ import notification
 GARAGE_SENSOR_PIN = 17
 GARAGE_CONTROL_PIN = 4
 
+try:
+    REDIS_HOST = os.environ['REDIS_HOST']
+except KeyError:
+    print('main.py::::: ERROR ------> missing env variables')
+    raise
+
 
 def listener():
     """
     Listen to redis channel for garage door open/close request
     """
     r = redis.Redis(
-        host='redis-pub-sub',
+        host=REDIS_HOST,
         port=6379,
         decode_responses=True
     )
@@ -76,7 +83,7 @@ def send_state_to_redis(garage_state):
     Send garage state to redis
     """
     r = redis.Redis(
-        host='redis-pub-sub',
+        host=REDIS_HOST,
         port=6379,
         decode_responses=True
     )
