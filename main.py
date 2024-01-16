@@ -1,72 +1,110 @@
-import random
-from paho.mqtt import client as mqtt_client
-from util.config import settings
+import os
+from multiprocessing import Process
+import time
 import RPi.GPIO as GPIO
-import time, sys
-from util import validator
+import redis
+import notification
 
-broker = settings['mqtt']['broker']
-port = 8883
-topic = "garage/command"
-client_id = f'garage-command-{random.randint(0, 100)}'
-username = settings['mqtt']['username']
-password = settings['mqtt']['password']
+GARAGE_SENSOR_PIN = 17
+GARAGE_CONTROL_PIN = 4
+try:
+    REDIS_HOST = os.environ['REDIS_HOST']
+except KeyError:
+    print('REDIS_HOST not set')
+    raise
 
 
-# TODO: Maybe set up logging sink
-def connect_mqtt() -> mqtt_client:
+def listener():
     """
-    Connecting to mqtt  garage topic
-    :return: mqtt client object
+    Listen to redis channel for garage door open/close request
     """
+    r = redis.Redis(
+        host=REDIS_HOST,
+        port=6379,
+        decode_responses=True
+    )
 
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("Connected to MQTT Broker!")
+    mobile = r.pubsub()
+    mobile.subscribe('garage-request')
+
+    for message in mobile.listen():
+        if message['data'] == 'open':
+            if read_garage_door_sensor() == 1:
+                print("Garage is open already! request to open has been ignored")
+                notification.send_push_notification("Garage is open already! request to open has been ignored")
+                r.publish('garage-state', 'opened')
+            else:
+                print("Opening Garage!")
+                notification.send_push_notification("Opening Garage!")
+                r.publish('garage-state', 'opening')
+                garage_relay()
+                r.publish('garage-state', 'opened')
+        elif message['data'] == 'close':
+            if read_garage_door_sensor() != 1:
+                print("Garage is closed already! Request to closed has been ignored")
+                notification.send_push_notification("Garage is closed already! Request to closed has been ignored")
+                r.publish('garage-state', 'closed')
+            else:
+                print("Closing Garage!")
+                notification.send_push_notification("Closing Garage!")
+                r.publish('garage-state', 'closing')
+                garage_relay()
+                r.publish('garage-state', 'closed')
         else:
-            print("Failed to connect, return code %d\n", rc)
-
-    client = mqtt_client.Client(client_id)
-    client.tls_set(ca_certs='./server-ca.crt')
-    client.username_pw_set(username, password)
-    client.on_connect = on_connect
-    client.connect(broker, port)
-    return client
-
-
-def subscribe(client: mqtt_client):
-    def on_message(client, userdata, msg):
-        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        if msg.payload.decode() == "open" and not validator.garage_is_open():
-            garage_relay()
-        elif msg.payload.decode() == "closed" and validator.garage_is_open():
-            garage_relay()
-
-    client.subscribe(topic)
-    client.on_message = on_message
-
-    # notification.send_push_notification("Raspberry Pi  ::::: Opening Garage door")
+            print(f'Invalid message {message}')
+            notification.send_push_notification(f'Invalid message {message}')
 
 
 def garage_relay():
     """
     Low level controls to open/close garage
     """
-    your_board_gpio = 4
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(your_board_gpio, GPIO.OUT)
+    GPIO.setup(GARAGE_CONTROL_PIN, GPIO.OUT)
     GPIO.setwarnings(False)
-    GPIO.output(your_board_gpio, GPIO.HIGH)
+    GPIO.output(GARAGE_CONTROL_PIN, GPIO.HIGH)
     time.sleep(1)
-    GPIO.output(your_board_gpio, GPIO.LOW)
-    GPIO.cleanup(your_board_gpio)
+    GPIO.output(GARAGE_CONTROL_PIN, GPIO.LOW)
+    GPIO.cleanup(GARAGE_CONTROL_PIN)
 
 
-def run():
-    client = connect_mqtt()
-    subscribe(client)
-    client.loop_forever()
+def read_garage_door_sensor():
+    """
+    Read garage door sensor
+    """
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(GARAGE_SENSOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    return GPIO.input(GARAGE_SENSOR_PIN)
+
+
+def send_state_to_redis(garage_state):
+    """
+    Send garage state to redis
+    """
+    r = redis.Redis(
+        host=REDIS_HOST,
+        port=6379,
+        decode_responses=True
+    )
+    r.set('garage-state', garage_state)
+    notification.send_push_notification(f'RPI::: Sending Garage state to redis::: Garage State: {garage_state}')
+
+
+def read_and_send_state_to_redis():
+    """
+    Read garage door sensor and send state to redis
+    """
+    while True:
+        state = read_garage_door_sensor()
+        if state == 0:
+            send_state_to_redis('closed')
+        else:
+            send_state_to_redis('opened')
+        time.sleep(2)
 
 
 if __name__ == '__main__':
-    run()
+    p1 = Process(target=listener)
+    p2 = Process(target=read_and_send_state_to_redis)
+    p1.start()
+    p2.start()
