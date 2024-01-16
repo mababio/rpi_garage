@@ -1,7 +1,12 @@
+import os
 from os import environ
 from urllib import request, parse
 
-TOKEN = environ.get('CHANIFY_KEY')
+try:
+    TOKEN = os.environ['CHANIFY_KEY']
+except KeyError:
+    print('notification.py::::: ERROR ------> missing env variables')
+    raise
 
 
 def send_push_notification(message):
