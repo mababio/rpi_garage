@@ -14,6 +14,8 @@ except KeyError:
     raise
 
 
+# TODO: May need to put some safety checks in here to make sure garage does not go haywire if pub/sub goes crazy
+
 def listener():
     """
     Listen to redis channel for garage door open/close request
