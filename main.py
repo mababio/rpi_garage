@@ -3,7 +3,6 @@ from multiprocessing import Process
 import time
 import redis
 from logs import Logger
-import logging
 
 logger = Logger(__name__)
 try:
@@ -55,6 +54,7 @@ def listener():
             if read_garage_door_sensor() != 1:
                 logger.info("Garage is closed already! Request to closed has been ignored")
                 r.publish('garage-state', 'closed')
+            else:
                 logger.info("Closing Garage!")
                 r.publish('garage-state', 'closing')
                 garage_relay()
