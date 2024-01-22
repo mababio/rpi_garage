@@ -3,6 +3,7 @@ from multiprocessing import Process
 import time
 import redis
 from logs import Logger
+import logging
 
 logger = Logger(__name__)
 try:
@@ -13,8 +14,8 @@ except RuntimeError:
                  "You can achieve this by using 'sudo' to run your script")
     raise
 
-GARAGE_SENSOR_PIN = 17
-GARAGE_CONTROL_PIN = 4
+GARAGE_SENSOR_PIN = 4
+GARAGE_CONTROL_PIN = 17
 try:
     REDIS_HOST = os.environ['REDIS_HOST']
 except KeyError:
@@ -58,6 +59,8 @@ def listener():
                 r.publish('garage-state', 'closing')
                 garage_relay()
                 r.publish('garage-state', 'closed')
+        elif message['data'] == 1:
+            logger.info('got 1 returned meaning pub/sub has been initialized')
         else:
             logger.info(f'Invalid message {message}')
 
@@ -66,6 +69,8 @@ def garage_relay():
     """
     Low level controls to open/close garage
     """
+    logger.info('TESTING >>>>>> doing action')
+    return 1
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(GARAGE_CONTROL_PIN, GPIO.OUT)
     GPIO.setwarnings(False)
@@ -81,7 +86,9 @@ def read_garage_door_sensor():
     """
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(GARAGE_SENSOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    return GPIO.input(GARAGE_SENSOR_PIN)
+    val = GPIO.input(GARAGE_SENSOR_PIN)
+    logger.info(f"read state is: {val}")
+    return val
 
 
 def send_state_to_redis(garage_state):
