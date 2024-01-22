@@ -1,9 +1,17 @@
 import os
 from multiprocessing import Process
 import time
-import RPi.GPIO as GPIO
 import redis
-import notification
+from logs import Logger
+
+logger = Logger(__name__)
+try:
+    from RPi import GPIO # pylint: disable=import-error
+except RuntimeError:
+    logger.fatal("Error importing RPi.GPIO! "
+                 " This is probably because you need superuser privileges. "
+                 "You can achieve this by using 'sudo' to run your script")
+    raise
 
 GARAGE_SENSOR_PIN = 17
 GARAGE_CONTROL_PIN = 4
@@ -14,7 +22,8 @@ except KeyError:
     raise
 
 
-# TODO: May need to put some safety checks in here to make sure garage does not go haywire if pub/sub goes crazy
+# TODO: May need to put some safety checks in here to
+#  make sure garage does not go haywire if pub/sub goes crazy
 
 def listener():
     """
@@ -33,28 +42,24 @@ def listener():
         if message['data'] == 'open':
             if read_garage_door_sensor() == 1:
                 print("Garage is open already! request to open has been ignored")
-                notification.send_push_notification("Garage is open already! request to open has been ignored")
+                logger.info("Garage is open already! request to open has been ignored")
                 r.publish('garage-state', 'opened')
             else:
                 print("Opening Garage!")
-                notification.send_push_notification("Opening Garage!")
+                logger.info("Opening Garage!")
                 r.publish('garage-state', 'opening')
                 garage_relay()
                 r.publish('garage-state', 'opened')
         elif message['data'] == 'close':
             if read_garage_door_sensor() != 1:
-                print("Garage is closed already! Request to closed has been ignored")
-                notification.send_push_notification("Garage is closed already! Request to closed has been ignored")
+                logger.info("Garage is closed already! Request to closed has been ignored")
                 r.publish('garage-state', 'closed')
-            else:
-                print("Closing Garage!")
-                notification.send_push_notification("Closing Garage!")
+                logger.info("Closing Garage!")
                 r.publish('garage-state', 'closing')
                 garage_relay()
                 r.publish('garage-state', 'closed')
         else:
-            print(f'Invalid message {message}')
-            notification.send_push_notification(f'Invalid message {message}')
+            logger.info(f'Invalid message {message}')
 
 
 def garage_relay():
@@ -89,7 +94,7 @@ def send_state_to_redis(garage_state):
         decode_responses=True
     )
     r.set('garage-state', garage_state)
-    notification.send_push_notification(f'RPI::: Sending Garage state to redis::: Garage State: {garage_state}')
+    logger.info(f'RPI::: Sending Garage state to redis::: Garage State: {garage_state}')
 
 
 def read_and_send_state_to_redis():
